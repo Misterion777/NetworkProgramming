@@ -1,6 +1,7 @@
 import socket
 import datetime
 import pickle
+from threading import Thread
 
 BUF_SIZE = 1024
 PORT = 3456
@@ -21,55 +22,57 @@ def get_ip():
 
 class Receiver:
     def __init__(self):
-        timeout = 20
+
         self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # self.__udp_socket.settimeout(timeout)
 
         self.__tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = get_ip()
 
-        self.__tcp_socket.bind((self.ip, PORT))
+        self.ip = get_ip()
+        self.address = (self.ip, PORT)
+
+        self.__udp_socket.bind(self.address)
+        self.__tcp_socket.bind(self.address)
         self.__tcp_socket.listen(5)
-        self.__sender_socket = socket.socket()
         print("Successfully created sockets. Current IP: {}".format(self.ip))
 
-        self.__accept_connection()
+        self.udpConnected = True
+        self.packets_sent = 0
 
-    def __accept_connection(self):
-        print("Waiting for connection of sender...")
-        self.__sender_socket, sender_address = self.__tcp_socket.accept()
-        print("{} connected!".format(sender_address))
+    def listen_tcp(self):
+        sender_socket, sender_address = self.__tcp_socket.accept()
+        self.packets_sent = int.from_bytes(sender_socket.recv(10), byteorder='big')
+        self.udpConnected = False
+        try:
+            self.__udp_socket.shutdown(socket.SHUT_RD)
+        except OSError:
+            print("Packets receiving finished!")
 
     def receive_packets(self):
-        packets_total = 0
-        bytes_send_total = 0
-        received_bytes = 0
-        send_time = datetime.datetime(1, 1, 1)
-        receive_time = datetime.datetime(1, 1, 1)
+        tcp_thread = Thread(target=self.listen_tcp)
+        tcp_thread.start()
+
+        self.udpConnected = True
+        packets_received = 0
         print("Started receiving packets!")
+        start_time = datetime.datetime.now()
         while True:
-            try:
-                received_bytes, sender_ip = self.__udp_socket.recvfrom(BUF_SIZE)
-                receive_time = datetime.datetime.now()
-
-                (send_time, bytes_sent) = pickle.loads(self.__sender_socket.recv(BUF_SIZE))
-                bytes_send_total += bytes_sent
-                received_bytes += len(received_bytes)
-                packets_total += 1
-            except socket.timeout:
-                speed = self.__count_time(receive_time, send_time)
-                loss = self.__count_loss(bytes_send_total, received_bytes)
-                print("Total packets received: {}".format(packets_total))
-                print("Data loss: {}%. Connection speed: {}".format(loss, speed))
+            self.__udp_socket.recv(BUF_SIZE)
+            if not self.udpConnected:
                 break
+            packets_received += 1
+
+        finish_time = datetime.datetime.now()
+        print("Packets sent:{} \nPackets received: {}".format(self.packets_sent, packets_received))
+        print("Speed: {} packets/sec".format(str(self.__count_time(finish_time, start_time))))
+        print("Loss: {}%".format(self.__count_loss(self.packets_sent, packets_received)))
+
+    def __count_time(self, receive_time, send_time):
+        return self.packets_sent / (receive_time - send_time).total_seconds()
 
     @staticmethod
-    def __count_time(receive_time, send_time):
-        return send_time - receive_time
+    def __count_loss(packets_sent, packets_received):
 
-    @staticmethod
-    def __count_loss(bytes_sent, received_bytes):
-        return (1 - (received_bytes / bytes_sent)) * 100
+        return "{0:.2f}".format((1 - (packets_received / packets_sent)) * 100)
 
     def close(self):
         self.__udp_socket.close()

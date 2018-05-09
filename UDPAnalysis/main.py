@@ -1,5 +1,5 @@
-from receiver import Receiver
-from sender import Sender
+from UDPAnalysis.receiver import Receiver
+from UDPAnalysis.sender import Sender
 
 
 def main():
