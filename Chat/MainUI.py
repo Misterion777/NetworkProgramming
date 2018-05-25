@@ -1,9 +1,9 @@
 import tkinter as tk
 import socket, pickle
 from threading import Thread
-import TopLevels as top
-import MessageFrame as msg
-import Server
+import Chat.TopLevels as top
+import Chat.MessageFrame as msg
+import Chat.Server as serv
 from tkinter import messagebox
 import time
 
@@ -132,7 +132,7 @@ class App(tk.Tk):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_name = ""
         self.server_ip = ""
-        self.server = Server.Server()
+        self.server = serv.Server()
 
         # Window startup customization
         self.x = (self.winfo_screenwidth() - self.winfo_reqwidth()) / 2
@@ -151,7 +151,7 @@ class App(tk.Tk):
     def host(self):
         self.mod_switcher.destroy()
         self.server.start_server()
-        self.connect(Server.ADDRESS)
+        self.connect(serv.ADDRESS)
         top.Authorization(self.container, self, "Register", "Please enter your nickname: ").wait_window()
 
     def client(self):

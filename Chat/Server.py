@@ -2,7 +2,7 @@ import socket
 from threading import Thread, Condition
 import pickle
 import time
-import history
+import Chat.history as history
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
