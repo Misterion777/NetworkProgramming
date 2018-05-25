@@ -1,6 +1,5 @@
 import socket
 import datetime
-import pickle
 from threading import Thread
 
 BUF_SIZE = 1024

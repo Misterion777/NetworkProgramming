@@ -25,6 +25,8 @@ class Sender:
         self.__tcp_socket.connect((self.receiver_ip, PORT))
         self.__tcp_socket.send((n).to_bytes(10,byteorder='big'))
 
+        self.__tcp_socket.close()
+
     def close(self):
         self.__udp_socket.close()
         self.__tcp_socket.close()
